@@ -1,0 +1,1265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Track your gym sets — log exercises, weights, and reps so you never forget where you left off." />
+  <title>GymLog — Never Forget Your Last Weight</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    /* ═══════════════════════════════════════════
+       DESIGN TOKENS
+    ═══════════════════════════════════════════ */
+    :root {
+      --bg-base:       #0a0b0f;
+      --bg-surface:    #111218;
+      --bg-card:       #16181f;
+      --bg-glass:      rgba(255,255,255,0.03);
+      --bg-glass-hover:rgba(255,255,255,0.06);
+      --border:        rgba(255,255,255,0.08);
+      --border-focus:  rgba(99,102,241,0.6);
+
+      --accent:        #6366f1;
+      --accent-light:  #818cf8;
+      --accent-glow:   rgba(99,102,241,0.25);
+      --accent-2:      #22d3ee;
+      --success:       #10b981;
+      --danger:        #ef4444;
+      --danger-glow:   rgba(239,68,68,0.25);
+      --warning:       #f59e0b;
+
+      --text-primary:  #f1f5f9;
+      --text-secondary:#94a3b8;
+      --text-muted:    #475569;
+
+      --radius-sm:     8px;
+      --radius-md:     12px;
+      --radius-lg:     16px;
+      --radius-xl:     24px;
+
+      --shadow-glow:   0 0 40px rgba(99,102,241,0.15);
+      --shadow-card:   0 4px 24px rgba(0,0,0,0.4);
+      --transition:    all 0.2s cubic-bezier(0.4,0,0.2,1);
+    }
+
+    /* ═══════════════════════════════════════════
+       RESET & BASE
+    ═══════════════════════════════════════════ */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg-base);
+      color: var(--text-primary);
+      min-height: 100vh;
+      overflow-x: hidden;
+      line-height: 1.6;
+    }
+
+    /* Animated gradient background */
+    body::before {
+      content: '';
+      position: fixed;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: radial-gradient(ellipse at 20% 20%, rgba(99,102,241,0.08) 0%, transparent 50%),
+                  radial-gradient(ellipse at 80% 80%, rgba(34,211,238,0.05) 0%, transparent 50%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ═══════════════════════════════════════════
+       LAYOUT
+    ═══════════════════════════════════════════ */
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 0 24px;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* ═══════════════════════════════════════════
+       HEADER
+    ═══════════════════════════════════════════ */
+    header {
+      padding: 48px 0 32px;
+      text-align: center;
+      position: relative;
+    }
+
+    .header-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(99,102,241,0.12);
+      border: 1px solid rgba(99,102,241,0.3);
+      color: var(--accent-light);
+      padding: 6px 16px;
+      border-radius: 100px;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 20px;
+    }
+
+    h1 {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: clamp(2.2rem, 5vw, 3.2rem);
+      font-weight: 700;
+      line-height: 1.1;
+      background: linear-gradient(135deg, #f1f5f9 0%, var(--accent-light) 50%, var(--accent-2) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 12px;
+    }
+
+    .header-subtitle {
+      color: var(--text-secondary);
+      font-size: 1rem;
+      max-width: 420px;
+      margin: 0 auto 32px;
+    }
+
+    /* Stats bar */
+    .stats-bar {
+      display: flex;
+      justify-content: center;
+      gap: 32px;
+      flex-wrap: wrap;
+      margin-bottom: 48px;
+    }
+
+    .stat {
+      text-align: center;
+    }
+
+    .stat-value {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 1.8rem;
+      font-weight: 700;
+      color: var(--accent-light);
+      display: block;
+    }
+
+    .stat-label {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .stat-divider {
+      width: 1px;
+      background: var(--border);
+      align-self: stretch;
+    }
+
+    /* ═══════════════════════════════════════════
+       LOG FORM CARD
+    ═══════════════════════════════════════════ */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-xl);
+      padding: 32px;
+      margin-bottom: 32px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(99,102,241,0.5), transparent);
+    }
+
+    .card-title {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 24px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .card-title .icon {
+      width: 32px;
+      height: 32px;
+      background: var(--accent-glow);
+      border: 1px solid rgba(99,102,241,0.3);
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+    }
+
+    /* ═══════════════════════════════════════════
+       FORM
+    ═══════════════════════════════════════════ */
+    .form-grid {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+
+    @media (max-width: 600px) {
+      .form-grid { grid-template-columns: 1fr; }
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .field-full {
+      grid-column: 1 / -1;
+    }
+
+    label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    input, textarea {
+      background: var(--bg-glass);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 12px 16px;
+      color: var(--text-primary);
+      font-family: 'Inter', sans-serif;
+      font-size: 0.95rem;
+      transition: var(--transition);
+      outline: none;
+      width: 100%;
+    }
+
+    input:focus, textarea:focus {
+      border-color: var(--border-focus);
+      background: rgba(99,102,241,0.05);
+      box-shadow: 0 0 0 3px var(--accent-glow);
+    }
+
+    input::placeholder, textarea::placeholder {
+      color: var(--text-muted);
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 72px;
+    }
+
+    /* ═══════════════════════════════════════════
+       BUTTONS
+    ═══════════════════════════════════════════ */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 12px 24px;
+      border-radius: var(--radius-sm);
+      font-family: 'Inter', sans-serif;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: var(--transition);
+      border: none;
+      text-decoration: none;
+      white-space: nowrap;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .btn::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: rgba(255,255,255,0);
+      transition: background 0.15s;
+    }
+
+    .btn:hover::after { background: rgba(255,255,255,0.08); }
+    .btn:active::after { background: rgba(255,255,255,0.14); }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent), #4f46e5);
+      color: #fff;
+      box-shadow: 0 4px 15px var(--accent-glow);
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px rgba(99,102,241,0.4);
+    }
+
+    .btn-primary:active { transform: translateY(0); }
+
+    .btn-primary:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .btn-ghost {
+      background: var(--bg-glass);
+      color: var(--text-secondary);
+      border: 1px solid var(--border);
+    }
+
+    .btn-ghost:hover {
+      color: var(--text-primary);
+      border-color: rgba(255,255,255,0.15);
+    }
+
+    .btn-danger {
+      background: rgba(239,68,68,0.12);
+      color: var(--danger);
+      border: 1px solid rgba(239,68,68,0.2);
+    }
+
+    .btn-danger:hover {
+      background: rgba(239,68,68,0.2);
+      border-color: rgba(239,68,68,0.4);
+    }
+
+    .btn-edit {
+      background: rgba(99,102,241,0.1);
+      color: var(--accent-light);
+      border: 1px solid rgba(99,102,241,0.2);
+    }
+
+    .btn-edit:hover {
+      background: rgba(99,102,241,0.2);
+      border-color: rgba(99,102,241,0.4);
+    }
+
+    .btn-sm {
+      padding: 7px 14px;
+      font-size: 0.8rem;
+    }
+
+    .form-actions {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    /* ═══════════════════════════════════════════
+       FEEDBACK MESSAGES
+    ═══════════════════════════════════════════ */
+    .feedback {
+      border-radius: var(--radius-sm);
+      padding: 12px 16px;
+      font-size: 0.875rem;
+      font-weight: 500;
+      display: none;
+      align-items: center;
+      gap: 10px;
+      margin-top: 16px;
+      animation: slideIn 0.2s ease;
+    }
+
+    .feedback.visible { display: flex; }
+
+    .feedback-success {
+      background: rgba(16,185,129,0.1);
+      border: 1px solid rgba(16,185,129,0.25);
+      color: #34d399;
+    }
+
+    .feedback-error {
+      background: rgba(239,68,68,0.1);
+      border: 1px solid rgba(239,68,68,0.25);
+      color: #f87171;
+    }
+
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(-6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ═══════════════════════════════════════════
+       SETS LIST
+    ═══════════════════════════════════════════ */
+    .sets-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .section-title {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .count-badge {
+      background: var(--accent-glow);
+      border: 1px solid rgba(99,102,241,0.3);
+      color: var(--accent-light);
+      padding: 2px 10px;
+      border-radius: 100px;
+      font-size: 0.75rem;
+      font-weight: 700;
+    }
+
+    /* ─── Loading ───────────────────────────── */
+    .loading-state {
+      text-align: center;
+      padding: 64px 0;
+      color: var(--text-muted);
+      display: none;
+    }
+
+    .loading-state.visible { display: block; }
+
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 16px;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ─── Empty State ───────────────────────── */
+    .empty-state {
+      text-align: center;
+      padding: 64px 32px;
+      color: var(--text-muted);
+      display: none;
+    }
+
+    .empty-state.visible { display: block; }
+
+    .empty-icon {
+      font-size: 3rem;
+      margin-bottom: 16px;
+      opacity: 0.5;
+    }
+
+    .empty-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      margin-bottom: 8px;
+    }
+
+    .empty-subtitle {
+      font-size: 0.875rem;
+    }
+
+    /* ─── Error State ───────────────────────── */
+    .error-state {
+      text-align: center;
+      padding: 48px 32px;
+      display: none;
+    }
+
+    .error-state.visible { display: block; }
+
+    .error-icon { font-size: 2rem; margin-bottom: 12px; }
+
+    .error-msg {
+      color: #f87171;
+      font-weight: 500;
+      margin-bottom: 16px;
+    }
+
+    /* ═══════════════════════════════════════════
+       SET CARDS
+    ═══════════════════════════════════════════ */
+    .sets-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .set-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 20px 24px;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 16px;
+      align-items: center;
+      transition: var(--transition);
+      animation: fadeUp 0.25s ease both;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .set-card::before {
+      content: '';
+      position: absolute;
+      left: 0; top: 0; bottom: 0;
+      width: 3px;
+      background: linear-gradient(to bottom, var(--accent), var(--accent-2));
+      border-radius: 0 2px 2px 0;
+    }
+
+    .set-card:hover {
+      border-color: rgba(99,102,241,0.25);
+      background: var(--bg-glass-hover);
+      transform: translateX(2px);
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(12px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .set-info {}
+
+    .set-exercise {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 1.05rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 6px;
+    }
+
+    .set-metrics {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .metric {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 0.875rem;
+    }
+
+    .metric-label {
+      color: var(--text-muted);
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .metric-value {
+      color: var(--text-primary);
+      font-weight: 600;
+    }
+
+    .metric-weight .metric-value {
+      color: var(--accent-light);
+      font-size: 1rem;
+    }
+
+    .set-notes {
+      margin-top: 8px;
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      font-style: italic;
+    }
+
+    .set-date {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      margin-top: 6px;
+    }
+
+    .set-actions {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-shrink: 0;
+    }
+
+    /* ═══════════════════════════════════════════
+       MODAL (Edit)
+    ═══════════════════════════════════════════ */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.75);
+      backdrop-filter: blur(8px);
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease;
+    }
+
+    .modal-overlay.open {
+      opacity: 1;
+      pointer-events: all;
+    }
+
+    .modal {
+      background: var(--bg-surface);
+      border: 1px solid rgba(99,102,241,0.3);
+      border-radius: var(--radius-xl);
+      padding: 32px;
+      width: 100%;
+      max-width: 520px;
+      position: relative;
+      box-shadow: var(--shadow-glow), var(--shadow-card);
+      transform: scale(0.95) translateY(16px);
+      transition: transform 0.2s cubic-bezier(0.34,1.56,0.64,1);
+    }
+
+    .modal-overlay.open .modal {
+      transform: scale(1) translateY(0);
+    }
+
+    .modal::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(99,102,241,0.6), transparent);
+    }
+
+    .modal-title {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 1.2rem;
+      font-weight: 600;
+      margin-bottom: 24px;
+      color: var(--text-primary);
+    }
+
+    .modal-actions {
+      display: flex;
+      gap: 12px;
+      justify-content: flex-end;
+      margin-top: 24px;
+    }
+
+    .modal-close {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      width: 32px;
+      height: 32px;
+      background: var(--bg-glass);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text-muted);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      transition: var(--transition);
+      line-height: 1;
+    }
+
+    .modal-close:hover {
+      color: var(--text-primary);
+      border-color: rgba(255,255,255,0.15);
+    }
+
+    /* ═══════════════════════════════════════════
+       FILTER / SEARCH
+    ═══════════════════════════════════════════ */
+    .search-bar {
+      position: relative;
+      flex: 1;
+      min-width: 180px;
+    }
+
+    .search-bar input {
+      padding-left: 40px;
+    }
+
+    .search-icon {
+      position: absolute;
+      left: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-muted);
+      font-size: 15px;
+      pointer-events: none;
+    }
+
+    /* ═══════════════════════════════════════════
+       FOOTER
+    ═══════════════════════════════════════════ */
+    footer {
+      text-align: center;
+      padding: 48px 0;
+      color: var(--text-muted);
+      font-size: 0.8rem;
+      border-top: 1px solid var(--border);
+      margin-top: 48px;
+    }
+
+    footer span { color: var(--accent-light); }
+
+    /* ═══════════════════════════════════════════
+       TOAST NOTIFICATION
+    ═══════════════════════════════════════════ */
+    .toast-container {
+      position: fixed;
+      top: 24px;
+      right: 24px;
+      z-index: 2000;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .toast {
+      background: var(--bg-surface);
+      border-radius: var(--radius-md);
+      padding: 14px 18px;
+      font-size: 0.875rem;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+      animation: toastIn 0.25s cubic-bezier(0.34,1.56,0.64,1);
+      max-width: 320px;
+    }
+
+    .toast.removing {
+      animation: toastOut 0.2s ease forwards;
+    }
+
+    .toast-success {
+      border: 1px solid rgba(16,185,129,0.4);
+      border-left: 3px solid var(--success);
+      color: #34d399;
+    }
+
+    .toast-error {
+      border: 1px solid rgba(239,68,68,0.4);
+      border-left: 3px solid var(--danger);
+      color: #f87171;
+    }
+
+    @keyframes toastIn {
+      from { opacity: 0; transform: translateX(100%) scale(0.9); }
+      to   { opacity: 1; transform: translateX(0) scale(1); }
+    }
+
+    @keyframes toastOut {
+      from { opacity: 1; transform: translateX(0) scale(1); }
+      to   { opacity: 0; transform: translateX(100%) scale(0.9); }
+    }
+
+    /* ═══════════════════════════════════════════
+       DELETE ANIMATION
+    ═══════════════════════════════════════════ */
+    .set-card.removing {
+      animation: fadeOut 0.25s ease forwards;
+    }
+
+    @keyframes fadeOut {
+      from { opacity: 1; transform: translateX(0); }
+      to   { opacity: 0; transform: translateX(32px); height: 0; padding: 0; margin: 0; overflow: hidden; }
+    }
+
+    /* ═══════════════════════════════════════════
+       RESPONSIVE
+    ═══════════════════════════════════════════ */
+    @media (max-width: 480px) {
+      .set-card {
+        grid-template-columns: 1fr;
+      }
+      .set-actions {
+        justify-content: flex-start;
+      }
+      .modal { padding: 24px; }
+      .card  { padding: 24px; }
+      .stats-bar { gap: 20px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Toast container -->
+<div class="toast-container" id="toastContainer" aria-live="polite"></div>
+
+<!-- Edit Modal -->
+<div class="modal-overlay" id="editModal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+  <div class="modal">
+    <button class="modal-close" id="modalCloseBtn" aria-label="Close modal">×</button>
+    <h2 class="modal-title" id="modalTitle">✏️ Edit Set</h2>
+    <input type="hidden" id="editId" />
+    <div class="form-grid" style="margin-bottom:16px;">
+      <div class="field">
+        <label for="editExercise">Exercise</label>
+        <input type="text" id="editExercise" placeholder="e.g. Bench Press" />
+      </div>
+      <div class="field">
+        <label for="editWeight">Weight (kg)</label>
+        <input type="number" id="editWeight" min="0" step="0.5" placeholder="60" />
+      </div>
+      <div class="field">
+        <label for="editReps">Reps</label>
+        <input type="number" id="editReps" min="1" step="1" placeholder="10" />
+      </div>
+    </div>
+    <div class="field" style="margin-bottom:0;">
+      <label for="editNotes">Notes (optional)</label>
+      <textarea id="editNotes" placeholder="e.g. felt strong today, slight shoulder pain..."></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="cancelEditBtn">Cancel</button>
+      <button class="btn btn-primary" id="saveEditBtn">
+        <span id="saveEditBtnText">Save Changes</span>
+      </button>
+    </div>
+    <div class="feedback" id="editFeedback"></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     MAIN CONTENT
+══════════════════════════════════════════ -->
+<div class="container">
+
+  <!-- HEADER -->
+  <header>
+    <div class="header-badge">🏋️ Gym Tracker</div>
+    <h1>Never Forget<br/>Your Last Weight</h1>
+    <p class="header-subtitle">
+      Log every set. Know exactly where you left off. No more guessing at the rack.
+    </p>
+    <div class="stats-bar">
+      <div class="stat">
+        <span class="stat-value" id="statTotal">—</span>
+        <span class="stat-label">Total Sets</span>
+      </div>
+      <div class="stat-divider"></div>
+      <div class="stat">
+        <span class="stat-value" id="statExercises">—</span>
+        <span class="stat-label">Exercises</span>
+      </div>
+      <div class="stat-divider"></div>
+      <div class="stat">
+        <span class="stat-value" id="statToday">—</span>
+        <span class="stat-label">Today</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- LOG FORM -->
+  <div class="card">
+    <div class="card-title">
+      <div class="icon">➕</div>
+      Log a New Set
+    </div>
+    <form id="logForm" novalidate>
+      <div class="form-grid">
+        <div class="field">
+          <label for="exercise">Exercise *</label>
+          <input type="text" id="exercise" name="exercise" placeholder="e.g. Bench Press, Squat, Deadlift" required />
+        </div>
+        <div class="field">
+          <label for="weight">Weight (kg) *</label>
+          <input type="number" id="weight" name="weight" min="0" step="0.5" placeholder="60" required />
+        </div>
+        <div class="field">
+          <label for="reps">Reps *</label>
+          <input type="number" id="reps" name="reps" min="1" step="1" placeholder="10" required />
+        </div>
+        <div class="field field-full">
+          <label for="notes">Notes (optional)</label>
+          <textarea id="notes" name="notes" placeholder="e.g. RPE 8, dropped 2.5kg from last week, used belt..."></textarea>
+        </div>
+      </div>
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary" id="submitBtn">
+          <span id="submitBtnText">🏋️ Log Set</span>
+        </button>
+        <button type="reset" class="btn btn-ghost" id="resetBtn">Clear</button>
+      </div>
+      <div class="feedback" id="formFeedback"></div>
+    </form>
+  </div>
+
+  <!-- SETS LIST -->
+  <div class="card">
+    <div class="sets-header">
+      <div class="section-title">
+        📋 Logged Sets
+        <span class="count-badge" id="countBadge">0</span>
+      </div>
+      <div class="search-bar">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="searchInput" placeholder="Filter by exercise..." aria-label="Filter sets" />
+      </div>
+    </div>
+
+    <!-- States -->
+    <div class="loading-state" id="loadingState">
+      <div class="spinner"></div>
+      <p>Loading your sets…</p>
+    </div>
+
+    <div class="error-state" id="errorState">
+      <div class="error-icon">⚠️</div>
+      <p class="error-msg" id="errorMsg">Could not reach the backend. Make sure the server is running.</p>
+      <button class="btn btn-ghost" onclick="loadSets()">Try Again</button>
+    </div>
+
+    <div class="empty-state" id="emptyState">
+      <div class="empty-icon">🏋️</div>
+      <p class="empty-title">No sets logged yet</p>
+      <p class="empty-subtitle">Fill in the form above to log your first set!</p>
+    </div>
+
+    <div class="sets-grid" id="setsGrid" aria-live="polite"></div>
+  </div>
+
+</div><!-- /container -->
+
+<footer>
+  <p>Built with ❤️ by <span>Neel</span> · GymLog · Express + SQLite + Vanilla JS</p>
+</footer>
+
+<script>
+  // ═══════════════════════════════════════════
+  //  CONFIG — update this to your Render URL
+  // ═══════════════════════════════════════════
+  const BACKEND_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+    ? 'http://localhost:3000'
+    : 'https://your-app.onrender.com'; // <-- Replace with your Render URL after deploying
+
+  // ═══════════════════════════════════════════
+  //  STATE
+  // ═══════════════════════════════════════════
+  let allSets = [];
+
+  // ═══════════════════════════════════════════
+  //  UTILS
+  // ═══════════════════════════════════════════
+  function formatDate(dateStr) {
+    if (!dateStr) return '';
+    const d = new Date(dateStr.replace(' ', 'T') + (dateStr.includes('T') ? '' : 'Z'));
+    return d.toLocaleString('en-IN', {
+      day: '2-digit', month: 'short', year: 'numeric',
+      hour: '2-digit', minute: '2-digit'
+    });
+  }
+
+  function showToast(msg, type = 'success') {
+    const container = document.getElementById('toastContainer');
+    const toast = document.createElement('div');
+    toast.className = `toast toast-${type}`;
+    toast.textContent = type === 'success' ? '✅ ' + msg : '❌ ' + msg;
+    container.appendChild(toast);
+    setTimeout(() => {
+      toast.classList.add('removing');
+      toast.addEventListener('animationend', () => toast.remove());
+    }, 3000);
+  }
+
+  function showFeedback(elId, msg, type) {
+    const el = document.getElementById(elId);
+    el.textContent = (type === 'success' ? '✅ ' : '❌ ') + msg;
+    el.className = `feedback feedback-${type} visible`;
+    setTimeout(() => el.classList.remove('visible'), 4000);
+  }
+
+  function updateStats() {
+    const total = allSets.length;
+    const exercises = new Set(allSets.map(s => s.exercise.toLowerCase())).size;
+    const today = new Date().toISOString().slice(0, 10);
+    const todayCount = allSets.filter(s => (s.logged_at || '').slice(0, 10) === today).length;
+
+    document.getElementById('statTotal').textContent = total;
+    document.getElementById('statExercises').textContent = exercises;
+    document.getElementById('statToday').textContent = todayCount;
+    document.getElementById('countBadge').textContent = total;
+  }
+
+  // ═══════════════════════════════════════════
+  //  RENDER SETS
+  // ═══════════════════════════════════════════
+  function renderSets(sets) {
+    const grid = document.getElementById('setsGrid');
+    const empty = document.getElementById('emptyState');
+
+    grid.innerHTML = '';
+
+    if (sets.length === 0) {
+      empty.classList.add('visible');
+      return;
+    }
+    empty.classList.remove('visible');
+
+    sets.forEach((s, i) => {
+      const card = document.createElement('div');
+      card.className = 'set-card';
+      card.id = `set-card-${s.id}`;
+      card.style.animationDelay = `${i * 0.04}s`;
+      card.innerHTML = `
+        <div class="set-info">
+          <div class="set-exercise">${escapeHtml(s.exercise)}</div>
+          <div class="set-metrics">
+            <div class="metric metric-weight">
+              <span class="metric-label">Weight</span>
+              <span class="metric-value">${s.weight_kg} kg</span>
+            </div>
+            <div class="metric">
+              <span class="metric-label">Reps</span>
+              <span class="metric-value">${s.reps}</span>
+            </div>
+          </div>
+          ${s.notes ? `<div class="set-notes">"${escapeHtml(s.notes)}"</div>` : ''}
+          <div class="set-date">🕐 ${formatDate(s.logged_at)}</div>
+        </div>
+        <div class="set-actions">
+          <button class="btn btn-edit btn-sm" id="edit-btn-${s.id}" onclick="openEditModal(${s.id})" aria-label="Edit set ${s.id}">✏️ Edit</button>
+          <button class="btn btn-danger btn-sm" id="delete-btn-${s.id}" onclick="deleteSet(${s.id})" aria-label="Delete set ${s.id}">🗑️</button>
+        </div>
+      `;
+      grid.appendChild(card);
+    });
+  }
+
+  function escapeHtml(str) {
+    if (!str) return '';
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  // ═══════════════════════════════════════════
+  //  READ — GET /sets
+  // ═══════════════════════════════════════════
+  async function loadSets() {
+    const loading = document.getElementById('loadingState');
+    const error   = document.getElementById('errorState');
+    const empty   = document.getElementById('emptyState');
+    const grid    = document.getElementById('setsGrid');
+
+    loading.classList.add('visible');
+    error.classList.remove('visible');
+    empty.classList.remove('visible');
+    grid.innerHTML = '';
+
+    try {
+      const res  = await fetch(`${BACKEND_URL}/sets`);
+      if (!res.ok) throw new Error(`Server error ${res.status}`);
+      allSets = await res.json();
+      renderSets(allSets);
+      updateStats();
+      applySearch();
+    } catch (err) {
+      console.error('loadSets error:', err);
+      document.getElementById('errorMsg').textContent =
+        `Could not reach the backend: ${err.message}. Is the server running?`;
+      error.classList.add('visible');
+    } finally {
+      loading.classList.remove('visible');
+    }
+  }
+
+  // ═══════════════════════════════════════════
+  //  CREATE — POST /sets
+  // ═══════════════════════════════════════════
+  document.getElementById('logForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn     = document.getElementById('submitBtn');
+    const btnText = document.getElementById('submitBtnText');
+
+    const exercise  = document.getElementById('exercise').value.trim();
+    const weight_kg = parseFloat(document.getElementById('weight').value);
+    const reps      = parseInt(document.getElementById('reps').value);
+    const notes     = document.getElementById('notes').value.trim();
+
+    if (!exercise) return showFeedback('formFeedback', 'Exercise name is required.', 'error');
+    if (isNaN(weight_kg) || weight_kg < 0) return showFeedback('formFeedback', 'Enter a valid weight.', 'error');
+    if (isNaN(reps) || reps < 1) return showFeedback('formFeedback', 'Enter a valid rep count.', 'error');
+
+    btn.disabled  = true;
+    btnText.textContent = 'Logging…';
+
+    try {
+      const res = await fetch(`${BACKEND_URL}/sets`, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ exercise, weight_kg, reps, notes }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to log set.');
+
+      // Prepend to local state and re-render
+      allSets.unshift(data);
+      renderSets(allSets);
+      updateStats();
+      applySearch();
+
+      e.target.reset();
+      showFeedback('formFeedback', `Set logged! ${exercise} — ${weight_kg}kg × ${reps}`, 'success');
+      showToast(`Logged: ${exercise} ${weight_kg}kg × ${reps}`);
+    } catch (err) {
+      showFeedback('formFeedback', err.message, 'error');
+    } finally {
+      btn.disabled  = false;
+      btnText.textContent = '🏋️ Log Set';
+    }
+  });
+
+  // ═══════════════════════════════════════════
+  //  DELETE — DELETE /sets/:id
+  // ═══════════════════════════════════════════
+  async function deleteSet(id) {
+    if (!confirm('Delete this set? This cannot be undone.')) return;
+
+    const card    = document.getElementById(`set-card-${id}`);
+    const delBtn  = document.getElementById(`delete-btn-${id}`);
+    if (delBtn) delBtn.disabled = true;
+
+    try {
+      const res = await fetch(`${BACKEND_URL}/sets/${id}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Delete failed.');
+
+      // Animate out
+      if (card) {
+        card.classList.add('removing');
+        card.addEventListener('animationend', () => card.remove(), { once: true });
+      }
+
+      allSets = allSets.filter(s => s.id !== id);
+      updateStats();
+      applySearch();
+      showToast('Set deleted.', 'success');
+
+      // Show empty state if no sets left
+      if (allSets.length === 0) {
+        document.getElementById('emptyState').classList.add('visible');
+      }
+    } catch (err) {
+      showToast(err.message, 'error');
+      if (delBtn) delBtn.disabled = false;
+    }
+  }
+
+  // ═══════════════════════════════════════════
+  //  UPDATE — PUT /sets/:id  (via modal)
+  // ═══════════════════════════════════════════
+  function openEditModal(id) {
+    const set = allSets.find(s => s.id === id);
+    if (!set) return;
+
+    document.getElementById('editId').value       = id;
+    document.getElementById('editExercise').value = set.exercise;
+    document.getElementById('editWeight').value   = set.weight_kg;
+    document.getElementById('editReps').value     = set.reps;
+    document.getElementById('editNotes').value    = set.notes || '';
+    document.getElementById('editFeedback').className = 'feedback';
+
+    document.getElementById('editModal').classList.add('open');
+    document.getElementById('editExercise').focus();
+  }
+
+  function closeEditModal() {
+    document.getElementById('editModal').classList.remove('open');
+  }
+
+  document.getElementById('modalCloseBtn').addEventListener('click', closeEditModal);
+  document.getElementById('cancelEditBtn').addEventListener('click', closeEditModal);
+  document.getElementById('editModal').addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) closeEditModal();
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeEditModal();
+  });
+
+  document.getElementById('saveEditBtn').addEventListener('click', async () => {
+    const id        = parseInt(document.getElementById('editId').value);
+    const exercise  = document.getElementById('editExercise').value.trim();
+    const weight_kg = parseFloat(document.getElementById('editWeight').value);
+    const reps      = parseInt(document.getElementById('editReps').value);
+    const notes     = document.getElementById('editNotes').value.trim();
+
+    if (!exercise) return showFeedback('editFeedback', 'Exercise name is required.', 'error');
+    if (isNaN(weight_kg) || weight_kg < 0) return showFeedback('editFeedback', 'Enter a valid weight.', 'error');
+    if (isNaN(reps) || reps < 1) return showFeedback('editFeedback', 'Enter a valid rep count.', 'error');
+
+    const saveBtn     = document.getElementById('saveEditBtn');
+    const saveBtnText = document.getElementById('saveEditBtnText');
+    saveBtn.disabled  = true;
+    saveBtnText.textContent = 'Saving…';
+
+    try {
+      const res = await fetch(`${BACKEND_URL}/sets/${id}`, {
+        method:  'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ exercise, weight_kg, reps, notes }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Update failed.');
+
+      // Update local state
+      const idx = allSets.findIndex(s => s.id === id);
+      if (idx !== -1) allSets[idx] = data;
+      renderSets(allSets);
+      updateStats();
+      applySearch();
+
+      showToast(`Updated: ${exercise} ${weight_kg}kg × ${reps}`);
+      closeEditModal();
+    } catch (err) {
+      showFeedback('editFeedback', err.message, 'error');
+    } finally {
+      saveBtn.disabled  = false;
+      saveBtnText.textContent = 'Save Changes';
+    }
+  });
+
+  // ═══════════════════════════════════════════
+  //  SEARCH / FILTER
+  // ═══════════════════════════════════════════
+  function applySearch() {
+    const q = document.getElementById('searchInput').value.trim().toLowerCase();
+    if (!q) {
+      renderSets(allSets);
+    } else {
+      renderSets(allSets.filter(s => s.exercise.toLowerCase().includes(q)));
+    }
+  }
+
+  document.getElementById('searchInput').addEventListener('input', applySearch);
+
+  // ═══════════════════════════════════════════
+  //  INIT
+  // ═══════════════════════════════════════════
+  loadSets();
+</script>
+</body>
+</html>
